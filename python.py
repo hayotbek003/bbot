@@ -6,6 +6,7 @@ import base64
 import logging
 import time
 import os
+import random
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s:%(message)s')
 
@@ -15,8 +16,8 @@ last_prompt = {}
 PHOTOS_FOLDER = "case_photos"
 os.makedirs(PHOTOS_FOLDER, exist_ok=True)
 
-TOKEN = "7970827048:AAFebncwOPimpg3jNtOkDiJnr0_LNrZAU_g"
-ADMINS = [6001209350, 7388508151]
+TOKEN = "8534666186:AAEGAbCnBiGV5CDmByKsyEL3frWoFLZ_n4I"
+ADMINS = [5911280005, 7388508151]
 
 bot = telebot.TeleBot(TOKEN)
 
@@ -72,21 +73,19 @@ def get_photo_path(photo_filename):
 def send_photo_from_file(chat_id, photo_filename, caption=None, **kwargs):
     """Fayldan rasm yuborish"""
     photo_path = get_photo_path(photo_filename)
-    
+
     if not os.path.exists(photo_path):
         logging.error(f"Rasm topilmadi: {photo_path}")
-        # Agar rasm bo'lmasa, oddiy matn yuborish
         if caption:
             bot.send_message(chat_id, caption, **kwargs)
         return False
-    
+
     try:
         with open(photo_path, 'rb') as photo:
             bot.send_photo(chat_id, photo, caption=caption, **kwargs)
         return True
     except Exception as e:
         logging.error(f"Rasm {photo_filename} ni yuborishda xatolik: {e}")
-        # Xato bo'lsa, oddiy matn yuborish
         if caption:
             bot.send_message(chat_id, caption, **kwargs)
         return False
@@ -221,37 +220,37 @@ def check_sub(uid):
     for (ch,) in chans:
         try:
             target = ch.strip()
-            
+
             if target.startswith("https://t.me/") or target.startswith("t.me/"):
                 if target.startswith("https://t.me/"):
                     username = target.replace("https://t.me/", "").lstrip("@")
                 else:
                     username = target.replace("t.me/", "").lstrip("@")
-                
+
                 if "?" in username:
                     username = username.split("?")[0]
                 if "/" in username:
                     username = username.split("/")[0]
-                    
+
                 target = f"@{username}"
-            
+
             if not target.startswith("@") and not target.startswith("-100"):
                 if target.isdigit():
                     target = f"-100{target}"
                 else:
                     target = f"@{target}"
-            
+
             try:
                 member = bot.get_chat_member(target, uid)
-                
+
                 if member.status in ['left', 'kicked']:
                     logging.info(f"Foydalanuvchi {uid} {target} kanalida emas")
                     return False
-                    
+
             except Exception as e:
                 logging.error(f"{target} kanali uchun a'zolikni tekshirishda xatolik: {e}")
                 continue
-                
+
         except Exception as e:
             logging.error(f"{ch} kanalini qayta ishlashda xatolik: {e}")
             continue
@@ -315,7 +314,7 @@ def prompt_subscription(uid, text=None):
 
     kb.add(types.InlineKeyboardButton("✅ Men obuna bo'ldim", callback_data="check"))
 
-    msg = text or "❗ Avval obuna bo'ling: iltimos, barcha sponsorkanallariga obuna bo'ling va keyin tasdiqlang"
+    msg = text or "❗ Avval obuna bo'ling: iltimos, barcha sponsor kanallariga obuna bo'ling va keyin tasdiqlang"
     try:
         bot.send_message(uid, msg, reply_markup=kb)
     except Exception as e:
@@ -324,8 +323,9 @@ def prompt_subscription(uid, text=None):
 def menu(uid):
     kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
     kb.add("💰 Tanga ishlash", "🛒 Do'kon")
-    kb.add("💳 Balans", "🆘 Qo'llab-quvvatlash")
+    kb.add("💳 Balans")
     kb.add("📝 Vazifalar")
+    kb.add("⭐ Sapyor", "💥 Crash")
     if is_admin(uid):
         kb.add("👑 Admin panel")
     bot.send_message(uid, "🏠 Asosiy menyu", reply_markup=kb)
@@ -349,10 +349,8 @@ def recheck(c):
 
 @bot.message_handler(commands=["start", "menu"])
 def cmd_start(m):
-    # FSM ni sbros qilish
     admin_state.pop(m.from_user.id, None)
-    
-    # Referal havolani tekshirish
+
     if len(m.text.split()) > 1:
         try:
             ref_id = int(m.text.split()[1])
@@ -363,14 +361,14 @@ def cmd_start(m):
                     db_query("UPDATE users SET coins = coins + 1 WHERE user_id=?", (ref_id,), commit=True)
         except:
             pass
-    
+
     if not db_query("SELECT 1 FROM users WHERE user_id=?", (m.from_user.id,), fetchone=True):
         db_query("INSERT INTO users (user_id, coins) VALUES (?,?)", (m.from_user.id, 0), commit=True)
-    
+
     if not check_sub(m.from_user.id):
         prompt_subscription(m.from_user.id)
         return
-    
+
     menu(m.from_user.id)
 
 @bot.message_handler(commands=["cancel"])
@@ -409,7 +407,6 @@ def balance(m):
         f"👥 Do'stlaringiz soni: {friends}"
     )
 
-    # Balans rasmini fayldan yuborish
     send_photo_from_file(
         m.chat.id,
         "balance.jpg",
@@ -419,7 +416,7 @@ def balance(m):
 @bot.message_handler(func=lambda m: getattr(m, 'text', '').strip() == "🆘 Qo'llab-quvvatlash")
 @require_subscription
 def support(m):
-    bot.send_message(m.chat.id, "🆘 Savollar uchun yozing: @admin")
+    bot.send_message(m.chat.id, "🆘 Savollar uchun yozing: @Camonim")
 
 @bot.message_handler(func=lambda m: any(word in (m.text or '').lower() for word in ['do\'kon', 'shop', '🛒']))
 @require_subscription
@@ -430,7 +427,6 @@ def shop(m):
     for p in [4, 7, 10, 15, 23, 35]:
         kb.add(types.InlineKeyboardButton(f"{p} tanga", callback_data=f"cat_{p}"))
 
-    # Do'kon rasmini fayldan yuborish
     send_photo_from_file(
         m.chat.id,
         "shop_categories.jpg",
@@ -502,7 +498,6 @@ def back_to_cats(c):
                 reply_markup=kb
             )
         except Exception:
-            # Kategoriya rasmini yuborish
             send_photo_from_file(
                 c.message.chat.id,
                 "shop_categories.jpg",
@@ -514,7 +509,7 @@ def back_to_cats(c):
 @require_subscription_callback
 def buy_case(c):
     uid = c.from_user.id
-    
+
     cid = int(c.data.split("_")[1])
 
     case = next((x for x in CASES if x["id"] == cid), None)
@@ -543,27 +538,24 @@ def buy_case(c):
         bot.answer_callback_query(c.id, "❌ Promokodlar tugadi")
         return
 
-    # Tangalarni hisobdan o'chirish
     db_query(
         "UPDATE users SET coins = coins - ? WHERE user_id=?",
         (case["price"], uid),
         commit=True
     )
 
-    # Promokodni o'chirish
     remove_promocode_by_id(promo[0])
 
     photo_filename = case.get("photo", "")
     promo_code = promo[1]
-    
-    # Keys rasmini fayldan yuborish
+
     send_photo_from_file(
         uid,
         photo_filename,
-        f"🎁 {case['name']}\n🎫 Promokod: `{promo_code}`",
+        f"🎁 {case['name']}\n🎫 Promokod: {promo_code}",
         parse_mode="Markdown"
     )
-    
+
     bot.answer_callback_query(c.id, "✅ Keys sotib olindi!")
 
 @bot.message_handler(func=lambda m: getattr(m, 'text', '').strip() == "👑 Admin panel")
@@ -670,7 +662,7 @@ def save_sponsor(m):
     try:
         chat_info = bot.get_chat(ch)
         logging.info(f"Kanal ma'lumoti: {chat_info.title} ({chat_info.id})")
-        
+
         try:
             bot_member = bot.get_chat_member(ch, bot.get_me().id)
             if bot_member.status not in ['administrator', 'creator']:
@@ -684,7 +676,7 @@ def save_sponsor(m):
         except Exception as e:
             if "chat not found" not in str(e).lower() and "bot is not a member" not in str(e).lower():
                 logging.warning(f"{ch} uchun bot admin statusini tekshirib bo'lmadi: {e}")
-    
+
     except Exception as e:
         error_msg = str(e).lower()
         if "chat not found" in error_msg:
@@ -708,7 +700,7 @@ def save_sponsor(m):
             )
         else:
             bot.send_message(
-                m.chat.id, 
+                m.chat.id,
                 f"⚠️ {ch} kanalini tekshirishda xatolik: {e}\n"
                 f"Iltimos, kanal mavjudligiga va bot unga kirish huquqiga ega ekanligiga ishonch hosil qiling."
             )
@@ -818,27 +810,27 @@ def create_task_require(m):
 def add_photo_menu(m):
     if not is_admin(m.from_user.id):
         return
-    
+
     kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
     kb.add("➕ Keys rasm qo'shish")
     kb.add("➕ Balans rasm qo'shish")
     kb.add("➕ Do'kon rasm qo'shish")
     kb.add("⬅️ Orqaga")
-    
+
     bot.send_message(m.chat.id, "🖼 Rasm qo'shish menyusi:", reply_markup=kb)
 
 @bot.message_handler(func=lambda m: getattr(m, 'text', '').strip() == "➕ Keys rasm qo'shish")
 def add_case_photo_start(m):
     if not is_admin(m.from_user.id):
         return
-    
+
     kb = types.InlineKeyboardMarkup()
     for case in CASES:
         kb.add(types.InlineKeyboardButton(
             case["name"],
             callback_data=f"addphoto_{case['id']}"
         ))
-    
+
     bot.send_message(m.chat.id, "📦 Keysni tanlang:", reply_markup=kb)
 
 @bot.callback_query_handler(func=lambda c: c.data.startswith("addphoto_"))
@@ -847,10 +839,10 @@ def add_case_photo(c):
         "step": "add_photo",
         "case_id": int(c.data.split("_")[1])
     }
-    
+
     case = next((x for x in CASES if x["id"] == int(c.data.split("_")[1])), None)
     if case:
-        bot.send_message(c.message.chat.id, 
+        bot.send_message(c.message.chat.id,
             f"📸 Keys: {case['name']}\n"
             f"Fayl nomi: {case['photo']}\n\n"
             f"Iltimos, rasmini yuboring (yoki hujjat sifatida).")
@@ -861,12 +853,11 @@ def add_case_photo(c):
 def handle_photo(m):
     if m.from_user.id not in admin_state or admin_state[m.from_user.id].get("step") != "add_photo":
         return
-    
+
     s = admin_state[m.from_user.id]
     case_id = s.get("case_id")
-    
+
     if not case_id:
-        # Umumiy rasmlar (balans, do'kon)
         if s.get("photo_type") == "balance":
             filename = "balance.jpg"
         elif s.get("photo_type") == "shop":
@@ -874,36 +865,30 @@ def handle_photo(m):
         else:
             return
     else:
-        # Keys rasmi
         case = next((x for x in CASES if x["id"] == case_id), None)
         if not case:
             return
         filename = case["photo"]
-    
+
     try:
         if m.photo:
-            # Agar rasm sifatida yuborilgan bo'lsa
             file_info = bot.get_file(m.photo[-1].file_id)
         elif m.document:
-            # Agar hujjat sifatida yuborilgan bo'lsa
             file_info = bot.get_file(m.document.file_id)
         else:
             bot.send_message(m.chat.id, "❌ Iltimos, rasm yoki hujjat yuboring.")
             return
-        
-        # Faylni yuklab olish
+
         downloaded_file = bot.download_file(file_info.file_path)
-        
-        # Papkaga saqlash
+
         file_path = os.path.join(PHOTOS_FOLDER, filename)
         with open(file_path, 'wb') as new_file:
             new_file.write(downloaded_file)
-        
+
         bot.send_message(m.chat.id, f"✅ Rasm saqlandi: {filename}")
-        
-        # Holatni tozalash
+
         del admin_state[m.from_user.id]
-        
+
     except Exception as e:
         logging.error(f"Rasm saqlashda xatolik: {e}")
         bot.send_message(m.chat.id, f"❌ Xatolik: {e}")
@@ -912,24 +897,24 @@ def handle_photo(m):
 def add_balance_photo(m):
     if not is_admin(m.from_user.id):
         return
-    
+
     admin_state[m.from_user.id] = {
         "step": "add_photo",
         "photo_type": "balance"
     }
-    
+
     bot.send_message(m.chat.id, "💰 Balans uchun rasmini yuboring (yoki hujjat sifatida).\nFayl nomi: balance.jpg")
 
 @bot.message_handler(func=lambda m: getattr(m, 'text', '').strip() == "➕ Do'kon rasm qo'shish")
 def add_shop_photo(m):
     if not is_admin(m.from_user.id):
         return
-    
+
     admin_state[m.from_user.id] = {
         "step": "add_photo",
         "photo_type": "shop"
     }
-    
+
     bot.send_message(m.chat.id, "🛒 Do'kon kategoriyalari uchun rasmini yuboring (yoki hujjat sifatida).\nFayl nomi: shop_categories.jpg")
 
 def _encode_channel(ch):
@@ -954,13 +939,13 @@ def cmd_sponsors(m):
         ch = s[0]
         if not ch:
             continue
-        
+
         url = ch
         if ch.startswith("@"):
             url = f"https://t.me/{ch[1:]}"
         elif not ch.startswith("http"):
             url = f"https://t.me/{ch.lstrip('@')}"
-        
+
         kb_row = []
         kb_row.append(types.InlineKeyboardButton(f"📢 {ch}", url=url))
         if isadm:
@@ -995,7 +980,7 @@ def list_tasks(m):
 @require_subscription_callback
 def accept_task(c):
     uid = c.from_user.id
-    
+
     tid = int(c.data.split("_")[1])
 
     row = db_query("SELECT done, title, reward, creator, require_channel, slots FROM tasks WHERE id=?", (tid,), fetchone=True)
@@ -1133,7 +1118,7 @@ def check_subscription(c):
                 return t
         if t.startswith("t.me/"):
             return t.split('/',1)[1]
-        return t  
+        return t
 
     if not req:
         db_query("UPDATE task_assignees SET completed=1 WHERE task_id=? AND user_id=?", (tid, uid), commit=True)
@@ -1178,11 +1163,10 @@ def check_subscription(c):
 def cmd_check_photos(m):
     if not is_admin(m.from_user.id):
         return
-    
+
     missing_files = []
     existing_files = []
-    
-    # Asosiy fayllarni tekshirish
+
     main_files = ["balance.jpg", "shop_categories.jpg"]
     for filename in main_files:
         path = get_photo_path(filename)
@@ -1190,26 +1174,25 @@ def cmd_check_photos(m):
             existing_files.append(f"✅ {filename}")
         else:
             missing_files.append(f"❌ {filename}")
-    
-    # Keys fayllarini tekshirish
+
     for case in CASES:
         path = get_photo_path(case["photo"])
         if os.path.exists(path):
             existing_files.append(f"✅ Keys {case['id']}: {case['photo']}")
         else:
             missing_files.append(f"❌ Keys {case['id']}: {case['photo']}")
-    
+
     response = "📁 Fayllar ro'yxati:\n\n"
-    
+
     if existing_files:
         response += "✅ Mavjud fayllar:\n" + "\n".join(existing_files) + "\n\n"
-    
+
     if missing_files:
         response += "❌ Mavjud bo'lmagan fayllar:\n" + "\n".join(missing_files) + "\n\n"
         response += "🖼 Rasm qo'shish uchun Admin panelda '🖼 Rasm qo'shish' tugmasini bosing."
     else:
         response += "✅ Barcha fayllar mavjud!"
-    
+
     bot.send_message(m.chat.id, response)
 
 @bot.message_handler(func=lambda m: getattr(m, 'text', '').strip() == "💸 Tanga berish")
@@ -1302,4 +1285,68 @@ def admin_promos(m):
 
     bot.send_message(m.chat.id, "📦 Promokodlar:\n" + "\n".join(text_lines))
 
+# ⭐ Sapyor - 26 katak o'yini
+@bot.message_handler(func=lambda m: m.text == "⭐ Sapyor")
+@require_subscription
+def prediction_menu(m):
+    kb = types.InlineKeyboardMarkup()
+    kb.add(types.InlineKeyboardButton("⭐ 3 yulduz (3 tanga)", callback_data="stars3"))
+    bot.send_message(m.chat.id, "Rejimni tanlang:", reply_markup=kb)
+
+@bot.callback_query_handler(func=lambda c: c.data == "stars3")
+@require_subscription_callback
+def show_stars_prediction(c):
+    uid = c.from_user.id
+
+    res = db_query("SELECT coins FROM users WHERE user_id=?", (uid,), fetchone=True)
+    coins = res[0] if res else 0
+
+    if coins < 3:
+        bot.answer_callback_query(c.id, "❌ 3 tanga kerak", show_alert=True)
+        return
+
+    db_query("UPDATE users SET coins = coins - 3 WHERE user_id=?", (uid,), commit=True)
+
+    cells = list(range(1, 27))
+    star_cells = random.sample(cells, 3)
+
+    kb = types.InlineKeyboardMarkup(row_width=5)
+
+    buttons = []
+    for i in cells:
+        if i in star_cells:
+            text = "⭐"
+        else:
+            text = "⬜"
+        buttons.append(types.InlineKeyboardButton(text, callback_data="none"))
+
+    kb.add(*buttons)
+
+    bot.send_message(uid, "⭐ Mana 3 ta xavfsiz katak:", reply_markup=kb)
+
+# 💥 Crash prognozi
+@bot.message_handler(func=lambda m: m.text == "💥 Crash")
+@require_subscription
+def crash_prediction(m):
+    uid = m.from_user.id
+
+    res = db_query("SELECT coins FROM users WHERE user_id=?", (uid,), fetchone=True)
+    coins = res[0] if res else 0
+
+    if coins < 2:
+        bot.send_message(uid, "❌ Kamida 2 tanga kerak")
+        return
+
+    db_query("UPDATE users SET coins = coins - 2 WHERE user_id=?", (uid,), commit=True)
+
+    crash_value = round(random.uniform(1.05, 2.55), 2)
+
+    bot.send_message(
+        uid,
+        f"💥 CRASH PROGNOZI\n\n"
+        f"🚀 Bugungi o'sish:\n\n"
+        f"🔥 {crash_value}x"
+    )
+
+# Botni ishga tushirish
 bot.infinity_polling(skip_pending=True)

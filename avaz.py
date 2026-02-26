@@ -5,62 +5,19 @@ import csv
 import base64
 import logging
 import time
-import requests
-import tempfile
 import os
-import imghdr
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s:%(message)s')
 
 last_prompt = {}
 
-def is_image_url(url):
-    """Упрощенная проверка URL изображения"""
-    if not url or not url.startswith("http"):
-        return False
-    return url.lower().endswith((".jpg", ".jpeg", ".png", ".webp", ".jfif"))
+# Rasmlar uchun papka
+PHOTOS_FOLDER = "case_photos"
+os.makedirs(PHOTOS_FOLDER, exist_ok=True)
 
-def send_photo_safe(chat_id, photo_url, caption=None, **kwargs):
-    """Раемни юклаб олиш ва файл сифатида юбориш"""
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-    }
+TOKEN = "8405295595:AAGOgilQZUHdfiIZqtk5blog9gl68BwWXfc"
+ADMINS = [5911280005]
 
-    try:
-        logging.info(f"Раем юкланмокда: {photo_url}")
-        
-        # Раемни юклаш
-        response = requests.get(photo_url, headers=headers, timeout=15)
-        response.raise_for_status()
-        
-        # Расширениени аниклаш
-        ext = imghdr.what(None, response.content) or "jpg"
-        if ext == "jfif":
-            ext = "jpg"
-        
-        # Вактинчалик файлга ёзиш
-        with tempfile.NamedTemporaryFile(delete=False, suffix=f'.{ext}') as f:
-            f.write(response.content)
-            temp_path = f.name
-        
-        # Раемни юбориш
-        try:
-            with open(temp_path, 'rb') as photo_file:
-                bot.send_photo(chat_id, photo_file, caption=caption, **kwargs)
-            return True
-        finally:
-            # Файлни тозалаш
-            try:
-                os.unlink(temp_path)
-            except:
-                pass
-                
-    except Exception as e:
-        logging.error(f"send_photo_safe хатоси: {str(e)[:100]}")
-        return False
-
-TOKEN = "8309105745:AAEoodMIvSiOqPEzkc3fqZhy4AX3nE3hYws"
-ADMINS = [6001209350, 7388508151]
 
 bot = telebot.TeleBot(TOKEN)
 
@@ -70,44 +27,70 @@ CASES = [
         "name": "Bullpass",
         "price": 4,
         "category": 4,
-        "photo": "https://files.catbox.moe/qpmm5f.jpg"
+        "photo": "bullpass.jpg"
     },
     {
         "id": 2,
         "name": "Jim Ustoz",
         "price": 7,
         "category": 7,
-        "photo": "https://files.catbox.moe/bz8az5.jpg"
+        "photo": "jim_ustoz.jpg"
     },
     {
         "id": 3,
         "name": "Ruhiy shoʻrva",
         "price": 10,
         "category": 10,
-        "photo": "https://files.catbox.moe/t3978m.jpg"
+        "photo": "ruhiy_shorva.jpg"
     },
     {
         "id": 4,
         "name": "Geysha sirlari",
         "price": 15,
         "category": 15,
-        "photo": "https://files.catbox.moe/fvdh78.jpg"
+        "photo": "geysha.jpg"
     },
     {
         "id": 5,
         "name": "JOJO",
         "price": 23,
         "category": 23,
-        "photo": "https://files.catbox.moe/fnq42d.jpg"
+        "photo": "jojo.jpg"
     },
     {
         "id": 6,
         "name": "Torii darvozasi",
         "price": 35,
         "category": 35,
-        "photo": "https://files.catbox.moe/t1kwv5.jpg"
+        "photo": "torii.jpg"
     }
 ]
+
+def get_photo_path(photo_filename):
+    """Rasm faylining toʻliq yoʻlini olish"""
+    return os.path.join(PHOTOS_FOLDER, photo_filename)
+
+def send_photo_from_file(chat_id, photo_filename, caption=None, **kwargs):
+    """Fayldan rasm yuborish"""
+    photo_path = get_photo_path(photo_filename)
+
+    if not os.path.exists(photo_path):
+        logging.error(f"Rasm topilmadi: {photo_path}")
+        # Agar rasm bo'lmasa, oddiy matn yuborish
+        if caption:
+            bot.send_message(chat_id, caption, **kwargs)
+        return False
+
+    try:
+        with open(photo_path, 'rb') as photo:
+            bot.send_photo(chat_id, photo, caption=caption, **kwargs)
+        return True
+    except Exception as e:
+        logging.error(f"Rasm {photo_filename} ni yuborishda xatolik: {e}")
+        # Xato bo'lsa, oddiy matn yuborish
+        if caption:
+            bot.send_message(chat_id, caption, **kwargs)
+        return False
 
 db = sqlite3.connect("bot.db", check_same_thread=False)
 
@@ -146,7 +129,7 @@ CREATE TABLE IF NOT EXISTS promocodes (
 PROMO_FILE = "promocodes.csv"
 
 def write_promos_file():
-    """CSV файлни яратиш (факат бек-ап учун)"""
+    """CSV faylini yaratish (faqat zaxira uchun)"""
     try:
         rows = db_query("SELECT id, case_id, code FROM promocodes", fetchall=True)
         with open(PROMO_FILE, "w", newline='', encoding='utf-8') as f:
@@ -155,10 +138,10 @@ def write_promos_file():
             for r in rows:
                 w.writerow(r)
     except Exception:
-        pass  # CSV факат бек-ап, асосий логика SQLite да
+        pass
 
 def add_promocode(case_id, code):
-    """Промокод қўшиш"""
+    """Promokod qo'shish"""
     db_query(
         "INSERT INTO promocodes (case_id, code) VALUES (?,?)",
         (case_id, code),
@@ -166,7 +149,7 @@ def add_promocode(case_id, code):
     )
 
 def remove_promocode_by_id(pid):
-    """Промокодни ID бўйича ўчириш"""
+    """Promokodni ID bo'yicha o'chirish"""
     db_query(
         "DELETE FROM promocodes WHERE id=?",
         (pid,),
@@ -228,7 +211,7 @@ def is_admin(uid):
     return uid in ADMINS
 
 def check_sub(uid):
-    """Барча каналларга обуна бўлганлигини текшириш"""
+    """Barcha kanallarga obuna bo'lganligini tekshirish"""
     if is_admin(uid):
         return True
 
@@ -239,45 +222,45 @@ def check_sub(uid):
     for (ch,) in chans:
         try:
             target = ch.strip()
-            
+
             if target.startswith("https://t.me/") or target.startswith("t.me/"):
                 if target.startswith("https://t.me/"):
                     username = target.replace("https://t.me/", "").lstrip("@")
                 else:
                     username = target.replace("t.me/", "").lstrip("@")
-                
+
                 if "?" in username:
                     username = username.split("?")[0]
                 if "/" in username:
                     username = username.split("/")[0]
-                    
+
                 target = f"@{username}"
-            
+
             if not target.startswith("@") and not target.startswith("-100"):
                 if target.isdigit():
                     target = f"-100{target}"
                 else:
                     target = f"@{target}"
-            
+
             try:
                 member = bot.get_chat_member(target, uid)
-                
+
                 if member.status in ['left', 'kicked']:
-                    logging.info(f"Фойдаланувчи {uid} {target} каналида эмас")
+                    logging.info(f"Foydalanuvchi {uid} {target} kanalida emas")
                     return False
-                    
+
             except Exception as e:
-                logging.error(f"{target} канали учун аъзоликни текширишда хатолик: {e}")
-                continue  # Хатолик бўлса, канални ўтказамиз
-                
+                logging.error(f"{target} kanali uchun a'zolikni tekshirishda xatolik: {e}")
+                continue
+
         except Exception as e:
-            logging.error(f"{ch} каналини қайта ишлашда хатолик: {e}")
+            logging.error(f"{ch} kanalini qayta ishlashda xatolik: {e}")
             continue
 
     return True
 
 def require_subscription(func):
-    """Функцияни бажаришдан олдин обунани текшириш учун декоратор"""
+    """Funksiyani bajarishdan oldin obunani tekshirish uchun dekorator"""
     def wrapper(message):
         uid = message.from_user.id
         if not check_sub(uid):
@@ -287,18 +270,18 @@ def require_subscription(func):
     return wrapper
 
 def require_subscription_callback(func):
-    """Callback функциясини бажаришдан олдин обунани текшириш учун декоратор"""
+    """Callback funksiyasini bajarishdan oldin obunani tekshirish uchun dekorator"""
     def wrapper(call):
         uid = call.from_user.id
         if not check_sub(uid):
-            bot.answer_callback_query(call.id, "❗ Аввал барча каналларга обуна бўлинг", show_alert=True)
+            bot.answer_callback_query(call.id, "❗ Avval barcha kanallarga obuna bo'ling", show_alert=True)
             prompt_subscription(uid)
             return
         return func(call)
     return wrapper
 
 def prompt_subscription(uid, text=None):
-    """Фойдаланувчига стандарт обуна таклифини юбориш"""
+    """Foydalanuvchiga standart obuna taklifini yuborish"""
     now = time.time()
     last = last_prompt.get(uid)
     if last and now - last < 60:
@@ -331,28 +314,28 @@ def prompt_subscription(uid, text=None):
 
             kb.add(types.InlineKeyboardButton(f"📢 {disp}", url=url))
 
-    kb.add(types.InlineKeyboardButton("✅ Мен обуна болдим", callback_data="check"))
+    kb.add(types.InlineKeyboardButton("✅ Men obuna bo'ldim", callback_data="check"))
 
-    msg = text or "❗ Аввал обуна бўлинг: илтимос, барча спонсор каналларига обуна бўлинг ва кейин тасдиқланг"
+    msg = text or "❗ Avval obuna bo'ling: iltimos, barcha sponsorkanallariga obuna bo'ling va keyin tasdiqlang"
     try:
         bot.send_message(uid, msg, reply_markup=kb)
     except Exception as e:
-        logging.exception("Обуна таклифини юборишда хатолик")
+        logging.exception("Obuna taklifini yuborishda xatolik")
 
 def menu(uid):
     kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    kb.add("💰 Танга ишлаш", "🛒 Магазин")
-    kb.add("💳 Баланс", "🆘 Қўллаб-қувватлаш")
-    kb.add("📝 Вазифалар")
+    kb.add("💰 Tanga ishlash", "🛒 Do'kon")
+    kb.add("💳 Balans", "Sapyor")
+    kb.add("📝 Vazifalar")
     if is_admin(uid):
-        kb.add("👑 Админ панел")
-    bot.send_message(uid, "🏠 Асосий меню", reply_markup=kb)
+        kb.add("👑 Admin panel")
+    bot.send_message(uid, "🏠 Asosiy menyu", reply_markup=kb)
 
 @bot.callback_query_handler(func=lambda c: c.data == "check")
 def recheck(c):
     uid = c.from_user.id
     if check_sub(uid):
-        bot.answer_callback_query(c.id, "✅ Раҳмат! Энди ботдан фойдаланишингиз мумкин.")
+        bot.answer_callback_query(c.id, "✅ Rahmat! Endi botdan foydalanishingiz mumkin.")
         try:
             bot.delete_message(c.message.chat.id, c.message.message_id)
         except:
@@ -361,16 +344,16 @@ def recheck(c):
     else:
         bot.answer_callback_query(
             c.id,
-            "❌ Сиз ҳали барча каналларга обуна бўлмагансиз!",
+            "❌ Siz hali barcha kanallarga obuna bo'lmagansiz!",
             show_alert=True
         )
 
 @bot.message_handler(commands=["start", "menu"])
 def cmd_start(m):
-    # FSM ни сброс қилиш
+    # FSM ni sbros qilish
     admin_state.pop(m.from_user.id, None)
-    
-    # Реферал ҳаволани текшириш
+
+    # Referal havolani tekshirish
     if len(m.text.split()) > 1:
         try:
             ref_id = int(m.text.split()[1])
@@ -381,32 +364,32 @@ def cmd_start(m):
                     db_query("UPDATE users SET coins = coins + 1 WHERE user_id=?", (ref_id,), commit=True)
         except:
             pass
-    
+
     if not db_query("SELECT 1 FROM users WHERE user_id=?", (m.from_user.id,), fetchone=True):
         db_query("INSERT INTO users (user_id, coins) VALUES (?,?)", (m.from_user.id, 0), commit=True)
-    
+
     if not check_sub(m.from_user.id):
         prompt_subscription(m.from_user.id)
         return
-    
+
     menu(m.from_user.id)
 
 @bot.message_handler(commands=["cancel"])
 def cmd_cancel(m):
     if m.from_user.id in admin_state:
         admin_state.pop(m.from_user.id, None)
-        bot.send_message(m.chat.id, "✅ Жараён бекор қилинди")
+        bot.send_message(m.chat.id, "✅ Jarayon bekor qilindi")
         menu(m.from_user.id)
     else:
-        bot.send_message(m.chat.id, "ℹ️ Фаол жараёнлар топилмади")
+        bot.send_message(m.chat.id, "ℹ️ Faol jarayonlar topilmadi")
 
-@bot.message_handler(func=lambda m: getattr(m, 'text', '').strip() == "💰 Танга ишлаш")
+@bot.message_handler(func=lambda m: getattr(m, 'text', '').strip() == "💰 Tanga ishlash")
 @require_subscription
 def earn(m):
     link = f"https://t.me/{bot.get_me().username}?start={m.from_user.id}"
-    bot.send_message(m.chat.id, f"🔗 Дўстларингиз билан ҳаволани улашинг!\n\n{link}\n\nДўстларингиз билан улашинг ва промо кодларни бирга ютиб олинг🤩")
+    bot.send_message(m.chat.id, f"🔗 Do'stlaringiz bilan havolani ulashing!\n\n{link}\n\nDo'stlaringiz bilan ulashing va promo kodlarni birga yutib oling🤩")
 
-@bot.message_handler(func=lambda m: getattr(m, 'text', '').strip() == "💳 Баланс")
+@bot.message_handler(func=lambda m: getattr(m, 'text', '').strip() == "💳 Balans")
 @require_subscription
 def balance(m):
     res = db_query(
@@ -421,49 +404,40 @@ def balance(m):
     friends = db_query("SELECT COUNT(*) FROM users WHERE ref=?", (m.from_user.id,), fetchone=True)[0] or 0
 
     caption = (
-        f"💰 Баланс: {coins} танга\n"
-        f"📦 Жами танга: {total_coins} танга\n"
-        f"🟢 Фаол фойдаланувчилар (танга>0): {active_users}\n"
-        f"👥 Дўстларингиз сони: {friends}"
+        f"💰 Balans: {coins} tanga\n"
+        f"📦 Jami tanga: {total_coins} tanga\n"
+        f"🟢 Faol foydalanuvchilar (tanga>0): {active_users}\n"
+        f"👥 Do'stlaringiz soni: {friends}"
     )
 
-    try:
-        send_photo_safe(
-            m.chat.id,
-            "https://i.postimg.cc/fLGHvN5n/photo-5375494812305394909-y-(1).jpg",
-            caption=caption
-        )
-    except Exception as e:
-        logging.exception(f"Баланс расмини {m.chat.id} га юборишда хатолик: {e}")
-        bot.send_message(m.chat.id, caption + "\n\n📷 Расм юборишда хатолик, ҳавола: https://i.postimg.cc/fLGHvN5n/photo-5375494812305394909-y-(1).jpg")
+    # Balans rasmini fayldan yuborish
+    send_photo_from_file(
+        m.chat.id,
+        "balance.jpg",
+        caption=caption
+    )
 
-@bot.message_handler(func=lambda m: getattr(m, 'text', '').strip() == "🆘 Қўллаб-қувватлаш")
+@bot.message_handler(func=lambda m: getattr(m, 'text', '').strip() == "🆘 Qo'llab-quvvatlash")
 @require_subscription
 def support(m):
-    bot.send_message(m.chat.id, "🆘 Саволлар учун ёзинг: @admin")
+    bot.send_message(m.chat.id, "🆘 Savollar uchun yozing: @Camonim")
 
-@bot.message_handler(func=lambda m: any(word in (m.text or '').lower() for word in ['магазин', 'shop', '🛒']))
+@bot.message_handler(func=lambda m: any(word in (m.text or '').lower() for word in ['do\'kon', 'shop', '🛒']))
 @require_subscription
 def shop(m):
     uid = m.from_user.id
 
     kb = types.InlineKeyboardMarkup()
     for p in [4, 7, 10, 15, 23, 35]:
-        kb.add(types.InlineKeyboardButton(f"{p} танга", callback_data=f"cat_{p}"))
+        kb.add(types.InlineKeyboardButton(f"{p} tanga", callback_data=f"cat_{p}"))
 
-    try:
-        send_photo_safe(
-            m.chat.id,
-            "https://i.postimg.cc/6QR4vx77/photo-5375494812305394911-y-(1).jpg",
-            caption="🎁 Кейс категориялари:",
-            reply_markup=kb
-        )
-    except Exception:
-        bot.send_message(
-            m.chat.id,
-            "🎁 Кейс категориялари:",
-            reply_markup=kb
-        )
+    # Do'kon rasmini fayldan yuborish
+    send_photo_from_file(
+        m.chat.id,
+        "shop_categories.jpg",
+        caption="🎁 Keys kategoriyalari:",
+        reply_markup=kb
+    )
 
 @bot.callback_query_handler(func=lambda c: c.data.startswith("cat_"))
 @require_subscription_callback
@@ -482,11 +456,11 @@ def show_cases(c):
                 )
             )
 
-    kb.add(types.InlineKeyboardButton("⬅️ Орқага", callback_data="back_cats"))
+    kb.add(types.InlineKeyboardButton("⬅️ Orqaga", callback_data="back_cats"))
 
     try:
         bot.edit_message_text(
-            "📦 Кейсни танланг:",
+            "📦 Keysni tanlang:",
             c.message.chat.id,
             c.message.message_id,
             reply_markup=kb
@@ -494,7 +468,7 @@ def show_cases(c):
     except Exception:
         try:
             bot.edit_message_caption(
-                "📦 Кейсни танланг:",
+                "📦 Keysni tanlang:",
                 c.message.chat.id,
                 c.message.message_id,
                 reply_markup=kb
@@ -502,7 +476,7 @@ def show_cases(c):
         except Exception:
             bot.send_message(
                 c.message.chat.id,
-                "📦 Кейсни танланг:",
+                "📦 Keysni tanlang:",
                 reply_markup=kb
             )
 
@@ -511,11 +485,11 @@ def show_cases(c):
 def back_to_cats(c):
     kb = types.InlineKeyboardMarkup()
     for p in [4, 7, 10, 15, 23, 35]:
-        kb.add(types.InlineKeyboardButton(f"{p} танга", callback_data=f"cat_{p}"))
+        kb.add(types.InlineKeyboardButton(f"{p} tanga", callback_data=f"cat_{p}"))
 
     try:
         bot.edit_message_text(
-            "🎁 Кейс категориялари:",
+            "🎁 Keys kategoriyalari:",
             c.message.chat.id,
             c.message.message_id,
             reply_markup=kb
@@ -523,28 +497,30 @@ def back_to_cats(c):
     except Exception:
         try:
             bot.edit_message_caption(
-                "🎁 Кейс категориялари:",
+                "🎁 Keys kategoriyalari:",
                 c.message.chat.id,
                 c.message.message_id,
                 reply_markup=kb
             )
         except Exception:
-            try:
-                send_photo_safe(c.message.chat.id, "https://i.postimg.cc/6QR4vx77/photo-5375494812305394911-y-(1).jpg", caption="🎁 Кейс категориялари:", reply_markup=kb)
-            except Exception as e:
-                logging.exception(f"Категория расмини {c.message.chat.id} га юборишда хатолик: {e}")
-                bot.send_message(c.message.chat.id, "🎁 Кейс категориялари:\n\n📷 Расм юборишда хатолик, ҳавола: https://i.postimg.cc/6QR4vx77/photo-5375494812305394911-y-(1).jpg", reply_markup=kb)
+            # Kategoriya rasmini yuborish
+            send_photo_from_file(
+                c.message.chat.id,
+                "shop_categories.jpg",
+                caption="🎁 Keys kategoriyalari:",
+                reply_markup=kb
+            )
 
 @bot.callback_query_handler(func=lambda c: c.data.startswith("case_"))
 @require_subscription_callback
 def buy_case(c):
     uid = c.from_user.id
-    
+
     cid = int(c.data.split("_")[1])
 
     case = next((x for x in CASES if x["id"] == cid), None)
     if not case:
-        bot.answer_callback_query(c.id, "❌ Кейс топилмади")
+        bot.answer_callback_query(c.id, "❌ Keys topilmadi")
         return
 
     res = db_query(
@@ -555,7 +531,7 @@ def buy_case(c):
     coins = res[0] if res else 0
 
     if coins < case["price"]:
-        bot.answer_callback_query(c.id, "❌ Етарли танга йўқ")
+        bot.answer_callback_query(c.id, "❌ Yetarli tanga yo'q")
         return
 
     promo = db_query(
@@ -565,62 +541,52 @@ def buy_case(c):
     )
 
     if not promo:
-        bot.answer_callback_query(c.id, "❌ Промокодлар тугади")
+        bot.answer_callback_query(c.id, "❌ Promokodlar tugadi")
         return
 
-    # Тангаларни хисобдан ўчириш
+    # Tangalarni hisobdan o'chirish
     db_query(
         "UPDATE users SET coins = coins - ? WHERE user_id=?",
         (case["price"], uid),
         commit=True
     )
 
-    # Промокодни ўчириш
+    # Promokodni o'chirish
     remove_promocode_by_id(promo[0])
 
-    photo_url = case.get("photo", "").strip()
+    photo_filename = case.get("photo", "")
     promo_code = promo[1]
-    
-    # Аввал расм юборишга уринамиз
-    try:
-        success = send_photo_safe(
-            uid,
-            photo_url,
-            f"🎁 {case['name']}\n🎫 Промокод: `{promo_code}`",
-            parse_mode="Markdown"
-        )
-        if not success:
-            raise Exception("send_photo_safe муваффақиятсиз")
-    except Exception as e:
-        logging.error(f"Расм юборишда хатолик: {e}")
-        # Факат матн юборамиз
-        bot.send_message(
-            uid,
-            f"🎁 {case['name']}\n🎫 Промокод: `{promo_code}`",
-            parse_mode="Markdown"
-        )
-    
-    bot.answer_callback_query(c.id, "✅ Кейс сотиб олинди!")
 
-@bot.message_handler(func=lambda m: getattr(m, 'text', '').strip() == "👑 Админ панел")
+    # Keys rasmini fayldan yuborish
+    send_photo_from_file(
+        uid,
+        photo_filename,
+        f"🎁 {case['name']}\n🎫 Promokod: `{promo_code}`",
+        parse_mode="Markdown"
+    )
+
+    bot.answer_callback_query(c.id, "✅ Keys sotib olindi!")
+
+@bot.message_handler(func=lambda m: getattr(m, 'text', '').strip() == "👑 Admin panel")
 def admin_panel(m):
     if not is_admin(m.from_user.id):
         return
 
     kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    kb.add("➕ Промокод қўшиш")
-    kb.add("💸 Танга бериш")
-    kb.add("➕ Вазифа яратиш")
-    kb.add("📢 Спонсор қўшиш")
-    kb.add("📊 Статистика")
-    kb.add("⬅️ Орқага")
-    bot.send_message(m.chat.id, "👑 Админ панел", reply_markup=kb)
+    kb.add("➕ Promokod qo'shish")
+    kb.add("💸 Tanga berish")
+    kb.add("➕ Vazifa yaratish")
+    kb.add("📢 Sponsor qo'shish")
+    kb.add("📊 Statistika")
+    kb.add("🖼 Rasm qo'shish")
+    kb.add("⬅️ Orqaga")
+    bot.send_message(m.chat.id, "👑 Admin panel", reply_markup=kb)
 
-@bot.message_handler(func=lambda m: getattr(m, 'text', '').strip() == "⬅️ Орқага")
+@bot.message_handler(func=lambda m: getattr(m, 'text', '').strip() == "⬅️ Orqaga")
 def back(m):
     menu(m.from_user.id)
 
-@bot.message_handler(func=lambda m: getattr(m, 'text', '').strip() == "➕ Промокод қўшиш")
+@bot.message_handler(func=lambda m: getattr(m, 'text', '').strip() == "➕ Promokod qo'shish")
 def add_promo_start(m):
     if not is_admin(m.from_user.id):
         return
@@ -632,7 +598,7 @@ def add_promo_start(m):
             callback_data=f"promo_{case['id']}"
         ))
 
-    bot.send_message(m.chat.id, "📦 Кейсни танланг:", reply_markup=kb)
+    bot.send_message(m.chat.id, "📦 Keysni tanlang:", reply_markup=kb)
 
 @bot.callback_query_handler(func=lambda c: c.data.startswith("promo_"))
 def promo_case(c):
@@ -640,7 +606,7 @@ def promo_case(c):
         "step": "promo_count",
         "case_id": int(c.data.split("_")[1])
     }
-    bot.send_message(c.message.chat.id, "🎫 Нечта промокод қўшмоқчисиз?")
+    bot.send_message(c.message.chat.id, "🎫 Nechta promokod qo'shmoqchisiz?")
 
 @bot.message_handler(func=lambda m: m.from_user.id in admin_state and admin_state[m.from_user.id]["step"] == "promo_count")
 def promo_count(m):
@@ -650,10 +616,10 @@ def promo_count(m):
     try:
         admin_state[m.from_user.id]["left"] = int(m.text)
     except ValueError:
-        bot.send_message(m.chat.id, "❌ Илтимос, сон киритинг")
+        bot.send_message(m.chat.id, "❌ Iltimos, son kiriting")
         return
     admin_state[m.from_user.id]["step"] = "promo_add"
-    bot.send_message(m.chat.id, "✍️ Промокодларни бирма-бир юборинг")
+    bot.send_message(m.chat.id, "✍️ Promokodlarni bitta-bitta yuboring")
 
 @bot.message_handler(func=lambda m: m.from_user.id in admin_state and admin_state[m.from_user.id]["step"] == "promo_add")
 def promo_add(m):
@@ -667,14 +633,14 @@ def promo_add(m):
     s["left"] -= 1
     if s["left"] == 0:
         del admin_state[m.from_user.id]
-        bot.send_message(m.chat.id, "✅ Промокодлар қўшилди")
+        bot.send_message(m.chat.id, "✅ Promokodlar qo'shildi")
 
-@bot.message_handler(func=lambda m: getattr(m, 'text', '').strip() == "📢 Спонсор қўшиш")
+@bot.message_handler(func=lambda m: getattr(m, 'text', '').strip() == "📢 Sponsor qo'shish")
 def add_sponsor(m):
     if not is_admin(m.from_user.id):
         return
     admin_state[m.from_user.id] = {"step": "sponsor"}
-    bot.send_message(m.chat.id, "📢 @канал ёки ҳавола юборинг (масалан: @channel_name ёки https://t.me/channel_name)")
+    bot.send_message(m.chat.id, "📢 @kanal yoki havola yuboring (masalan: @channel_name yoki https://t.me/channel_name)")
 
 def _normalize_channel_input(ch_text):
     ch = (ch_text or "").strip()
@@ -704,55 +670,55 @@ def save_sponsor(m):
 
     try:
         chat_info = bot.get_chat(ch)
-        logging.info(f"Канал маълумоти: {chat_info.title} ({chat_info.id})")
-        
+        logging.info(f"Kanal ma'lumoti: {chat_info.title} ({chat_info.id})")
+
         try:
             bot_member = bot.get_chat_member(ch, bot.get_me().id)
             if bot_member.status not in ['administrator', 'creator']:
                 bot.send_message(
                     m.chat.id,
-                    f"⚠️ Бот {ch} каналида администратор эмас\n\n"
-                    f"Обуналарни текшириш учун бот каналда администратор бўлиши керак.\n"
-                    f"Ботни {ch} каналига 'Аъзоларни кўриш' ҳуқуқи билан администратор қилиб қўйинг."
+                    f"⚠️ Bot {ch} kanalida administrator emas\n\n"
+                    f"Obunalarni tekshirish uchun bot kanalda administrator bo'lishi kerak.\n"
+                    f"Botni {ch} kanaliga 'A'zolarni ko'rish' huquqi bilan administrator qilib qo'ying."
                 )
                 return
         except Exception as e:
             if "chat not found" not in str(e).lower() and "bot is not a member" not in str(e).lower():
-                logging.warning(f"{ch} учун бот админ статусини текшириб бўлмади: {e}")
-    
+                logging.warning(f"{ch} uchun bot admin statusini tekshirib bo'lmadi: {e}")
+
     except Exception as e:
         error_msg = str(e).lower()
         if "chat not found" in error_msg:
             bot.send_message(
                 m.chat.id,
-                f"❌ {ch} канали топилмади ёки шахсий.\n\n"
-                f"Шахсий каналлар учун:\n"
-                f"1. Ботни каналга администратор қилиб қўйинг\n"
-                f"2. Ботга 'Аъзоларни кўриш' ҳуқуқини беринг\n"
-                f"3. Шундан сўнг канални қайта қўшиб кўринг"
+                f"❌ {ch} kanali topilmadi yoki shaxsiy.\n\n"
+                f"Shaxsiy kanallar uchun:\n"
+                f"1. Botni kanalga administrator qilib qo'ying\n"
+                f"2. Botga 'A'zolarni ko'rish' huquqini bering\n"
+                f"3. Shundan so'ng kanalni qayta qo'shib ko'ring"
             )
         elif "bot is not a member" in error_msg:
             bot.send_message(
                 m.chat.id,
-                f"❌ Бот {ch} каналига қўшилмаган\n\n"
-                f"Илтимос:\n"
-                f"1. Ботни @{bot.get_me().username} каналига қўшинг\n"
-                f"2. Ботни администратор қилинг\n"
-                f"3. 'Аъзоларни кўриш' ҳуқуқини беринг\n"
-                f"4. Қайта уриниб кўринг"
+                f"❌ Bot {ch} kanaliga qo'shilmagan\n\n"
+                f"Iltimos:\n"
+                f"1. Botni @{bot.get_me().username} kanaliga qo'shing\n"
+                f"2. Botni administrator qiling\n"
+                f"3. 'A'zolarni ko'rish' huquqini bering\n"
+                f"4. Qayta urinib ko'ring"
             )
         else:
             bot.send_message(
-                m.chat.id, 
-                f"⚠️ {ch} каналини текширишда хатолик: {e}\n"
-                f"Илтимос, канал мавжудлигига ва бот унга кириш ҳуқуқига эга эканлигига ишонч ҳосил қилинг."
+                m.chat.id,
+                f"⚠️ {ch} kanalini tekshirishda xatolik: {e}\n"
+                f"Iltimos, kanal mavjudligiga va bot unga kirish huquqiga ega ekanligiga ishonch hosil qiling."
             )
         return
 
     existing = db_query("SELECT 1 FROM sponsors WHERE channel=?", (ch,), fetchone=True)
     if existing:
         del admin_state[m.from_user.id]
-        bot.send_message(m.chat.id, "ℹ️ Бу спонсор аллақачон мавжуд")
+        bot.send_message(m.chat.id, "ℹ️ Bu sponsor allaqachon mavjud")
         return
 
     admin_state[m.from_user.id] = {
@@ -761,22 +727,22 @@ def save_sponsor(m):
     }
 
     kb = types.InlineKeyboardMarkup()
-    kb.add(types.InlineKeyboardButton("🔁 Ўзгартириш", callback_data="sponsor_edit"))
-    kb.add(types.InlineKeyboardButton("✅ Тайёр", callback_data="sponsor_confirm"))
-    kb.add(types.InlineKeyboardButton("❌ Бекор қилиш", callback_data="sponsor_cancel"))
+    kb.add(types.InlineKeyboardButton("🔁 O'zgartirish", callback_data="sponsor_edit"))
+    kb.add(types.InlineKeyboardButton("✅ Tayyor", callback_data="sponsor_confirm"))
+    kb.add(types.InlineKeyboardButton("❌ Bekor qilish", callback_data="sponsor_cancel"))
 
     try:
-        bot.send_message(m.chat.id, f"📢 Топилди: {ch}\nИлтимос тасдиқланг ёки ўзгартиринг:", reply_markup=kb)
+        bot.send_message(m.chat.id, f"📢 Topildi: {ch}\nIltimos tasdiqlang yoki o'zgartiring:", reply_markup=kb)
     except Exception as e:
-        logging.exception("Спонсор тасдиқлаш тугмаларини юборишда хатолик: %s", e)
-        bot.send_message(m.chat.id, f"📢 Топилди: {ch}\nИлтимос тасдиқланг ёки ўзгартиринг:\n(Inline тугмалар юборилмади — илтимос, /sponsors билан текширинг ёки қайта юборинг)")
+        logging.exception("Sponsor tasdiqlash tugmalarini yuborishda xatolik: %s", e)
+        bot.send_message(m.chat.id, f"📢 Topildi: {ch}\nIltimos tasdiqlang yoki o'zgartiring:\n(Inline tugmalar yuborilmadi — iltimos, /sponsors bilan tekshiring yoki qayta yuboring)")
 
-@bot.message_handler(func=lambda m: getattr(m, 'text', '').strip() == "➕ Вазифа яратиш")
+@bot.message_handler(func=lambda m: getattr(m, 'text', '').strip() == "➕ Vazifa yaratish")
 def create_task_start(m):
     if not is_admin(m.from_user.id):
         return
     admin_state[m.from_user.id] = {"step": "task_title"}
-    bot.send_message(m.chat.id, "✍️ Вазифа сарлавҳасини киритинг")
+    bot.send_message(m.chat.id, "✍️ Vazifa sarlavhasini kiriting")
 
 @bot.message_handler(func=lambda m: m.from_user.id in admin_state and admin_state[m.from_user.id]["step"] == "task_title")
 def create_task_title(m):
@@ -784,7 +750,7 @@ def create_task_title(m):
         admin_state.pop(m.from_user.id, None)
         return
     admin_state[m.from_user.id] = {"step": "task_desc", "title": m.text}
-    bot.send_message(m.chat.id, "✍️ Вазифа матнини киритинг")
+    bot.send_message(m.chat.id, "✍️ Vazifa matnini kiriting")
 
 @bot.message_handler(func=lambda m: m.from_user.id in admin_state and admin_state[m.from_user.id]["step"] == "task_desc")
 def create_task_desc(m):
@@ -794,7 +760,7 @@ def create_task_desc(m):
     s = admin_state[m.from_user.id]
     s["desc"] = m.text
     s["step"] = "task_reward"
-    bot.send_message(m.chat.id, "✍️ Неча танга берасиз? (сон)")
+    bot.send_message(m.chat.id, "✍️ Necha tanga berasiz? (son)")
 
 @bot.message_handler(func=lambda m: m.from_user.id in admin_state and admin_state[m.from_user.id]["step"] == "task_slots")
 def create_task_slots(m):
@@ -807,11 +773,11 @@ def create_task_slots(m):
         if slots < 1:
             raise ValueError
     except Exception:
-        bot.send_message(m.chat.id, "❌ Илтимос, 1 ёки ундан катта бутун сон киритинг")
+        bot.send_message(m.chat.id, "❌ Iltimos, 1 yoki undan katta butun son kiriting")
         return
     s["slots"] = slots
     s["step"] = "task_require"
-    bot.send_message(m.chat.id, "🔗 Агар вазифа учун каналга обуна бўлиш талаб қилинса, канални (@канал ёки t.me/ҳавола) юборинг; агар талаб йўқ бўлса 'йўқ' ёзинг")
+    bot.send_message(m.chat.id, "🔗 Agar vazifa uchun kanalga obuna bo'lish talab qilinsa, kanalni (@kanal yoki t.me/havola) yuboring; agar talab yo'q bo'lsa 'yo'q' yozing")
 
 @bot.message_handler(func=lambda m: m.from_user.id in admin_state and admin_state[m.from_user.id]["step"] == "task_reward")
 def create_task_reward(m):
@@ -822,12 +788,12 @@ def create_task_reward(m):
     try:
         reward = int(m.text)
     except Exception:
-        bot.send_message(m.chat.id, "❌ Бутун сон киритинг")
+        bot.send_message(m.chat.id, "❌ Butun son kiriting")
         return
 
     s["reward"] = reward
     s["step"] = "task_slots"
-    bot.send_message(m.chat.id, "🔢 Нечта иштирокчи рухсат этилади? (бутун сон, стандарт 1)")
+    bot.send_message(m.chat.id, "🔢 Nechta ishtirokchi ruxsat etiladi? (butun son, standart 1)")
 
 @bot.message_handler(func=lambda m: m.from_user.id in admin_state and admin_state[m.from_user.id]["step"] == "task_require")
 def create_task_require(m):
@@ -836,7 +802,7 @@ def create_task_require(m):
         return
     s = admin_state[m.from_user.id]
     channel = m.text.strip()
-    if channel.lower() == "йўқ" or channel == "":
+    if channel.lower() == "yo'q" or channel == "":
         channel = None
 
     db_query(
@@ -846,8 +812,126 @@ def create_task_require(m):
     )
 
     tid = db_query("SELECT last_insert_rowid()", fetchone=True)[0]
-    bot.send_message(m.chat.id, f"✅ Вазифа яратилди (id: {tid})")
+    bot.send_message(m.chat.id, f"✅ Vazifa yaratildi (id: {tid})")
     del admin_state[m.from_user.id]
+
+@bot.message_handler(func=lambda m: getattr(m, 'text', '').strip() == "🖼 Rasm qo'shish")
+def add_photo_menu(m):
+    if not is_admin(m.from_user.id):
+        return
+
+    kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    kb.add("➕ Keys rasm qo'shish")
+    kb.add("➕ Balans rasm qo'shish")
+    kb.add("➕ Do'kon rasm qo'shish")
+    kb.add("⬅️ Orqaga")
+
+    bot.send_message(m.chat.id, "🖼 Rasm qo'shish menyusi:", reply_markup=kb)
+
+@bot.message_handler(func=lambda m: getattr(m, 'text', '').strip() == "➕ Keys rasm qo'shish")
+def add_case_photo_start(m):
+    if not is_admin(m.from_user.id):
+        return
+
+    kb = types.InlineKeyboardMarkup()
+    for case in CASES:
+        kb.add(types.InlineKeyboardButton(
+            case["name"],
+            callback_data=f"addphoto_{case['id']}"
+        ))
+
+    bot.send_message(m.chat.id, "📦 Keysni tanlang:", reply_markup=kb)
+
+@bot.callback_query_handler(func=lambda c: c.data.startswith("addphoto_"))
+def add_case_photo(c):
+    admin_state[c.from_user.id] = {
+        "step": "add_photo",
+        "case_id": int(c.data.split("_")[1])
+    }
+
+    case = next((x for x in CASES if x["id"] == int(c.data.split("_")[1])), None)
+    if case:
+        bot.send_message(c.message.chat.id,
+            f"📸 Keys: {case['name']}\n"
+            f"Fayl nomi: {case['photo']}\n\n"
+            f"Iltimos, rasmini yuboring (yoki hujjat sifatida).")
+    else:
+        bot.send_message(c.message.chat.id, "Rasmini yuboring:")
+
+@bot.message_handler(content_types=['photo', 'document'])
+def handle_photo(m):
+    if m.from_user.id not in admin_state or admin_state[m.from_user.id].get("step") != "add_photo":
+        return
+
+    s = admin_state[m.from_user.id]
+    case_id = s.get("case_id")
+
+    if not case_id:
+        # Umumiy rasmlar (balans, do'kon)
+        if s.get("photo_type") == "balance":
+            filename = "balance.jpg"
+        elif s.get("photo_type") == "shop":
+            filename = "shop_categories.jpg"
+        else:
+            return
+    else:
+        # Keys rasmi
+        case = next((x for x in CASES if x["id"] == case_id), None)
+        if not case:
+            return
+        filename = case["photo"]
+
+    try:
+        if m.photo:
+            # Agar rasm sifatida yuborilgan bo'lsa
+            file_info = bot.get_file(m.photo[-1].file_id)
+        elif m.document:
+            # Agar hujjat sifatida yuborilgan bo'lsa
+            file_info = bot.get_file(m.document.file_id)
+        else:
+            bot.send_message(m.chat.id, "❌ Iltimos, rasm yoki hujjat yuboring.")
+            return
+
+        # Faylni yuklab olish
+        downloaded_file = bot.download_file(file_info.file_path)
+
+        # Papkaga saqlash
+        file_path = os.path.join(PHOTOS_FOLDER, filename)
+        with open(file_path, 'wb') as new_file:
+            new_file.write(downloaded_file)
+
+        bot.send_message(m.chat.id, f"✅ Rasm saqlandi: {filename}")
+
+        # Holatni tozalash
+        del admin_state[m.from_user.id]
+
+    except Exception as e:
+        logging.error(f"Rasm saqlashda xatolik: {e}")
+        bot.send_message(m.chat.id, f"❌ Xatolik: {e}")
+
+@bot.message_handler(func=lambda m: getattr(m, 'text', '').strip() == "➕ Balans rasm qo'shish")
+def add_balance_photo(m):
+    if not is_admin(m.from_user.id):
+        return
+
+    admin_state[m.from_user.id] = {
+        "step": "add_photo",
+        "photo_type": "balance"
+    }
+
+    bot.send_message(m.chat.id, "💰 Balans uchun rasmini yuboring (yoki hujjat sifatida).\nFayl nomi: balance.jpg")
+
+@bot.message_handler(func=lambda m: getattr(m, 'text', '').strip() == "➕ Do'kon rasm qo'shish")
+def add_shop_photo(m):
+    if not is_admin(m.from_user.id):
+        return
+
+    admin_state[m.from_user.id] = {
+        "step": "add_photo",
+        "photo_type": "shop"
+    }
+
+    bot.send_message(m.chat.id, "🛒 Do'kon kategoriyalari uchun rasmini yuboring (yoki hujjat sifatida).\nFayl nomi: shop_categories.jpg")
 
 def _encode_channel(ch):
     return base64.urlsafe_b64encode(ch.encode()).decode()
@@ -862,7 +946,7 @@ def _decode_channel(enc):
 def cmd_sponsors(m):
     sponsors = db_query("SELECT channel FROM sponsors", fetchall=True)
     if not sponsors:
-        bot.send_message(m.chat.id, "ℹ️ Ҳозирча спонсор каналлари рўйхати бўш")
+        bot.send_message(m.chat.id, "ℹ️ Hozircha sponsor kanallari ro'yxati bo'sh")
         return
 
     kb = types.InlineKeyboardMarkup()
@@ -871,23 +955,23 @@ def cmd_sponsors(m):
         ch = s[0]
         if not ch:
             continue
-        
+
         url = ch
         if ch.startswith("@"):
             url = f"https://t.me/{ch[1:]}"
         elif not ch.startswith("http"):
             url = f"https://t.me/{ch.lstrip('@')}"
-        
+
         kb_row = []
         kb_row.append(types.InlineKeyboardButton(f"📢 {ch}", url=url))
         if isadm:
             enc = _encode_channel(ch)
-            kb_row.append(types.InlineKeyboardButton("🗑 Ўчириш", callback_data=f"remove_sponsor_{enc}"))
+            kb_row.append(types.InlineKeyboardButton("🗑 O'chirish", callback_data=f"remove_sponsor_{enc}"))
         kb.row(*kb_row)
 
-    bot.send_message(m.chat.id, "📢 Спонсор каналлари:", reply_markup=kb)
+    bot.send_message(m.chat.id, "📢 Sponsor kanallari:", reply_markup=kb)
 
-@bot.message_handler(func=lambda m: getattr(m, 'text', '').strip() == "📝 Вазифалар")
+@bot.message_handler(func=lambda m: getattr(m, 'text', '').strip() == "📝 Vazifalar")
 @require_subscription
 def list_tasks(m):
     rows = db_query("SELECT id, title, description, reward, require_channel, slots FROM tasks WHERE done=0", fetchall=True)
@@ -900,65 +984,65 @@ def list_tasks(m):
             continue
         out_count += 1
         kb = types.InlineKeyboardMarkup()
-        kb.add(types.InlineKeyboardButton("Қабул қиламан", callback_data=f"accept_{tid}"))
-        text = f"📝 {title}\n{desc}\n💰 Мукофот: {reward} танга\n🔢 Қолган ўринлар: {remaining}"
+        kb.add(types.InlineKeyboardButton("Qabul qilaman", callback_data=f"accept_{tid}"))
+        text = f"📝 {title}\n{desc}\n💰 Mukofot: {reward} tanga\n🔢 Qolgan o'rinlar: {remaining}"
         if req:
-            text += f"\n🔒 Обуна талаб қилинади: {req}"
+            text += f"\n🔒 Obuna talab qilinadi: {req}"
         bot.send_message(m.chat.id, text, reply_markup=kb)
     if out_count == 0:
-        bot.send_message(m.chat.id, "ℹ️ Ҳозирча мавжуд вазифалар йўқ")
+        bot.send_message(m.chat.id, "ℹ️ Hozircha mavjud vazifalar yo'q")
 
 @bot.callback_query_handler(func=lambda c: c.data.startswith("accept_"))
 @require_subscription_callback
 def accept_task(c):
     uid = c.from_user.id
-    
+
     tid = int(c.data.split("_")[1])
 
     row = db_query("SELECT done, title, reward, creator, require_channel, slots FROM tasks WHERE id=?", (tid,), fetchone=True)
     if not row:
-        bot.answer_callback_query(c.id, "❌ Вазифа топилмади")
+        bot.answer_callback_query(c.id, "❌ Vazifa topilmadi")
         return
     done, title, reward, creator, req, slots = row
     if done:
-        bot.answer_callback_query(c.id, "❌ Вазифа аллақачон бажарилган")
+        bot.answer_callback_query(c.id, "❌ Vazifa allaqachon bajarilgan")
         return
 
     already = db_query("SELECT 1 FROM task_assignees WHERE task_id=? AND user_id=?", (tid, uid), fetchone=True)
     if already:
-        bot.answer_callback_query(c.id, "❌ Сиз аллақачон бу вазифани қабул қилгансиз")
+        bot.answer_callback_query(c.id, "❌ Siz allaqachon bu vazifani qabul qilgansiz")
         return
 
     current = db_query("SELECT COUNT(*) FROM task_assignees WHERE task_id=?", (tid,), fetchone=True)[0] or 0
     if current >= (slots or 1):
-        bot.answer_callback_query(c.id, "❌ Бошқа иштирокчилар аллақачон тўлдирилган")
+        bot.answer_callback_query(c.id, "❌ Boshqa ishtirokchilar allaqachon to'ldirilgan")
         return
 
     db_query("INSERT INTO task_assignees (task_id, user_id, completed) VALUES (?,?,?)", (tid, uid, 0), commit=True)
-    bot.answer_callback_query(c.id, "✅ Вазифани қабул қилдингиз")
-    bot.send_message(uid, f"✅ Сиз '{title}' вазифасини қабул қилдингиз. Мукофот: {reward} танга")
+    bot.answer_callback_query(c.id, "✅ Vazifani qabul qildingiz")
+    bot.send_message(uid, f"✅ Siz '{title}' vazifasini qabul qildingiz. Mukofot: {reward} tanga")
 
     try:
-        bot.send_message(creator, f"👤 Фойдаланувчи {c.from_user.id} вазифани қабул қилди (id: {tid})")
+        bot.send_message(creator, f"👤 Foydalanuvchi {c.from_user.id} vazifani qabul qildi (id: {tid})")
     except Exception:
         pass
 
     kb = types.InlineKeyboardMarkup()
-    kb.add(types.InlineKeyboardButton("✅ Мен бажардим", callback_data=f"checksub_{tid}"))
+    kb.add(types.InlineKeyboardButton("✅ Men bajardim", callback_data=f"checksub_{tid}"))
     if req:
-        bot.send_message(uid, f"🔔 Ушбу вазифа учун {req} каналига обуна бўлиш талаб қилинади. Обуна бўлгач, қуйидаги тугмани босинг.", reply_markup=kb)
+        bot.send_message(uid, f"🔔 Ushbu vazifa uchun {req} kanaliga obuna bo'lish talab qilinadi. Obuna bo'lgach, quyidagi tugmani bosing.", reply_markup=kb)
     else:
-        bot.send_message(uid, "✅ Вазифани бажарганингизни тасдиқлаш учун қуйидаги тугмани босинг:", reply_markup=kb)
+        bot.send_message(uid, "✅ Vazifani bajarganingizni tasdiqlash uchun quyidagi tugmani bosing:", reply_markup=kb)
 
 @bot.callback_query_handler(func=lambda c: c.data.startswith("remove_sponsor_"))
 def remove_sponsor(c):
     if not is_admin(c.from_user.id):
-        bot.answer_callback_query(c.id, "❌ Рухсат йўқ")
+        bot.answer_callback_query(c.id, "❌ Ruxsat yo'q")
         return
     enc = c.data.split("remove_sponsor_")[1]
     ch = _decode_channel(enc)
     db_query("DELETE FROM sponsors WHERE channel=?", (ch,), commit=True)
-    bot.answer_callback_query(c.id, f"✅ Спонсор {ch} ўчирилди")
+    bot.answer_callback_query(c.id, f"✅ Sponsor {ch} o'chirildi")
     try:
         bot.delete_message(c.message.chat.id, c.message.message_id)
     except Exception:
@@ -967,10 +1051,10 @@ def remove_sponsor(c):
 @bot.callback_query_handler(func=lambda c: c.data == "sponsor_edit")
 def sponsor_edit(c):
     if not is_admin(c.from_user.id):
-        bot.answer_callback_query(c.id, "❌ Рухсат йўқ")
+        bot.answer_callback_query(c.id, "❌ Ruxsat yo'q")
         return
     admin_state[c.from_user.id] = {"step": "sponsor"}
-    bot.answer_callback_query(c.id, "✍️ Илтимос янги @канал ёки t.me/ҳавола юборинг")
+    bot.answer_callback_query(c.id, "✍️ Iltimos yangi @kanal yoki t.me/havola yuboring")
     try:
         bot.delete_message(c.message.chat.id, c.message.message_id)
     except Exception:
@@ -979,10 +1063,10 @@ def sponsor_edit(c):
 @bot.callback_query_handler(func=lambda c: c.data == "sponsor_cancel")
 def sponsor_cancel(c):
     if not is_admin(c.from_user.id):
-        bot.answer_callback_query(c.id, "❌ Рухсат йўқ")
+        bot.answer_callback_query(c.id, "❌ Ruxsat yo'q")
         return
     admin_state.pop(c.from_user.id, None)
-    bot.answer_callback_query(c.id, "❌ Спонсор қўшиш бекор қилинди")
+    bot.answer_callback_query(c.id, "❌ Sponsor qo'shish bekor qilindi")
     try:
         bot.delete_message(c.message.chat.id, c.message.message_id)
     except Exception:
@@ -991,21 +1075,21 @@ def sponsor_cancel(c):
 @bot.callback_query_handler(func=lambda c: c.data == "sponsor_confirm")
 def sponsor_confirm(c):
     if not is_admin(c.from_user.id):
-        bot.answer_callback_query(c.id, "❌ Рухсат йўқ")
+        bot.answer_callback_query(c.id, "❌ Ruxsat yo'q")
         return
     s = admin_state.get(c.from_user.id)
     if not s or s.get("step") != "sponsor_confirm":
-        bot.answer_callback_query(c.id, "❌ Тасдиқлаш учун спонсор йўқ")
+        bot.answer_callback_query(c.id, "❌ Tasdiqlash uchun sponsor yo'q")
         return
     ch = s.get("pending")
     if not ch:
-        bot.answer_callback_query(c.id, "❌ Номаълум канал")
+        bot.answer_callback_query(c.id, "❌ Noma'lum kanal")
         return
 
     existing = db_query("SELECT 1 FROM sponsors WHERE channel=?", (ch,), fetchone=True)
     if existing:
         admin_state.pop(c.from_user.id, None)
-        bot.answer_callback_query(c.id, "ℹ️ Бу спонсор аллақачон мавжуд")
+        bot.answer_callback_query(c.id, "ℹ️ Bu sponsor allaqachon mavjud")
         try:
             bot.delete_message(c.message.chat.id, c.message.message_id)
         except Exception:
@@ -1014,7 +1098,7 @@ def sponsor_confirm(c):
 
     db_query("INSERT INTO sponsors (channel) VALUES (?)", (ch,), commit=True)
     admin_state.pop(c.from_user.id, None)
-    bot.answer_callback_query(c.id, f"✅ Спонсор қўшилди: {ch}")
+    bot.answer_callback_query(c.id, f"✅ Sponsor qo'shildi: {ch}")
     try:
         bot.delete_message(c.message.chat.id, c.message.message_id)
     except Exception:
@@ -1027,18 +1111,18 @@ def check_subscription(c):
 
     row = db_query("SELECT done, title, reward, creator, require_channel, slots FROM tasks WHERE id=?", (tid,), fetchone=True)
     if not row:
-        bot.answer_callback_query(c.id, "❌ Вазифа топилмади")
+        bot.answer_callback_query(c.id, "❌ Vazifa topilmadi")
         return
     done, title, reward, creator, req, slots = row
     assigned = db_query("SELECT completed FROM task_assignees WHERE task_id=? AND user_id= ?", (tid, uid), fetchone=True)
     if not assigned:
-        bot.answer_callback_query(c.id, "❌ Сиз ушбу вазифани қабул қилмагансиз")
+        bot.answer_callback_query(c.id, "❌ Siz ushbu vazifani qabul qilmagansiz")
         return
     if done:
-        bot.answer_callback_query(c.id, "ℹ️ Вазифа аллақачон бажарилган")
+        bot.answer_callback_query(c.id, "ℹ️ Vazifa allaqachon bajarilgan")
         return
     if assigned[0] == 1:
-        bot.answer_callback_query(c.id, "ℹ️ Сиз ушбу вазифани аллақачон бажардингиз")
+        bot.answer_callback_query(c.id, "ℹ️ Siz ushbu vazifani allaqachon bajardingiz")
         return
 
     def normalize_channel(text):
@@ -1050,15 +1134,15 @@ def check_subscription(c):
                 return t
         if t.startswith("t.me/"):
             return t.split('/',1)[1]
-        return t  
+        return t
 
     if not req:
         db_query("UPDATE task_assignees SET completed=1 WHERE task_id=? AND user_id=?", (tid, uid), commit=True)
         db_query("UPDATE users SET coins = coins + ? WHERE user_id=?", (reward, uid), commit=True)
-        bot.answer_callback_query(c.id, "✅ Вазифа бажарилди, мукофот топширилди")
-        bot.send_message(uid, f"✅ Сиз '{title}' вазифасини бажардингиз. Мукофот: {reward} танга")
+        bot.answer_callback_query(c.id, "✅ Vazifa bajarildi, mukofot topshirildi")
+        bot.send_message(uid, f"✅ Siz '{title}' vazifasini bajardingiz. Mukofot: {reward} tanga")
         try:
-            bot.send_message(creator, f"✅ Фойдаланувчи {uid} вазифани бажарди (id: {tid})")
+            bot.send_message(creator, f"✅ Foydalanuvchi {uid} vazifani bajardi (id: {tid})")
         except Exception:
             pass
         completed_count = db_query("SELECT COUNT(*) FROM task_assignees WHERE task_id=? AND completed=1", (tid,), fetchone=True)[0] or 0
@@ -1077,67 +1161,64 @@ def check_subscription(c):
         if member.status not in ["left", "kicked"]:
             db_query("UPDATE task_assignees SET completed=1 WHERE task_id=? AND user_id=?", (tid, uid), commit=True)
             db_query("UPDATE users SET coins = coins + ? WHERE user_id=?", (reward, uid), commit=True)
-            bot.answer_callback_query(c.id, "✅ Обуна текширилди ва вазифа бажарилди")
-            bot.send_message(uid, f"✅ Сиз '{title}' вазифасини бажардингиз ва {reward} танга олдингиз")
+            bot.answer_callback_query(c.id, "✅ Obuna tekshirildi va vazifa bajarildi")
+            bot.send_message(uid, f"✅ Siz '{title}' vazifasini bajardingiz va {reward} tanga oldingiz")
             try:
-                bot.send_message(creator, f"✅ Фойдаланувчи {uid} вазифани бажарди (id: {tid})")
+                bot.send_message(creator, f"✅ Foydalanuvchi {uid} vazifani bajardi (id: {tid})")
             except Exception:
                 pass
             completed_count = db_query("SELECT COUNT(*) FROM task_assignees WHERE task_id=? AND completed=1", (tid,), fetchone=True)[0] or 0
             if completed_count >= (slots or 1):
                 db_query("UPDATE tasks SET done=1 WHERE id=?", (tid,), commit=True)
         else:
-            bot.answer_callback_query(c.id, "❌ Сиз каналга обуна бўлмагансиз")
+            bot.answer_callback_query(c.id, "❌ Siz kanalga obuna bo'lmagansiz")
     except Exception:
-        bot.answer_callback_query(c.id, "❌ Канални текширишда хатолик. Илтимос, админ билан боғланинг")
+        bot.answer_callback_query(c.id, "❌ Kanalni tekshirishda xatolik. Iltimos, admin bilan bog'laning")
 
-@bot.message_handler(commands=["check_url"])
-def cmd_check_url(m):
-    args = m.text.split(maxsplit=1)
-    if len(args) < 2:
-        bot.send_message(m.chat.id, "ℹ️ Илтимос, URL киритинг: /check_url https://example.com/image.jpg")
-        return
-    url = args[1].strip()
-    bot.send_message(m.chat.id, f"🔍 Текширилмокда: {url}")
-    ok = is_image_url(url)
-    if ok:
-        bot.send_message(m.chat.id, f"✅ Бу URL тасвирга ўхшайди: {url}")
-    else:
-        try:
-            r = requests.head(url, allow_redirects=True, timeout=5)
-            ct = r.headers.get('content-type', '(none)')
-            status = r.status_code
-            bot.send_message(m.chat.id, f"❌ Бу URL тасвир эмас ёки ишламаёпти. status={status}, content-type={ct}")
-        except Exception as e:
-            bot.send_message(m.chat.id, f"❌ Текширишда хатолик: {e}")
-
-@bot.message_handler(commands=["check_case_images"])
-def cmd_check_case_images(m):
+@bot.message_handler(commands=["check_photos"])
+def cmd_check_photos(m):
     if not is_admin(m.from_user.id):
-        bot.send_message(m.chat.id, "❌ Рухсат йўқ")
         return
-    bot.send_message(m.chat.id, "🔍 Ҳаммасини текширяпман, кутинг...")
-    broken = []
-    ok = []
-    for case in CASES:
-        url = case.get('photo', '')
-        if is_image_url(url):
-            ok.append((case['id'], case['name']))
-        else:
-            broken.append((case['id'], case['name'], url))
-    txt = f"✅ Яхши: {len(ok)}\n❌ Муаммоли: {len(broken)}\n"
-    if broken:
-        txt += "\nМуаммоли URL\n"
-        for b in broken:
-            txt += f"- id {b[0]} {b[1]}: {b[2]}\n"
-    bot.send_message(m.chat.id, txt)
 
-@bot.message_handler(func=lambda m: getattr(m, 'text', '').strip() == "💸 Танга бериш")
+    missing_files = []
+    existing_files = []
+
+    # Asosiy fayllarni tekshirish
+    main_files = ["balance.jpg", "shop_categories.jpg"]
+    for filename in main_files:
+        path = get_photo_path(filename)
+        if os.path.exists(path):
+            existing_files.append(f"✅ {filename}")
+        else:
+            missing_files.append(f"❌ {filename}")
+
+    # Keys fayllarini tekshirish
+    for case in CASES:
+        path = get_photo_path(case["photo"])
+        if os.path.exists(path):
+            existing_files.append(f"✅ Keys {case['id']}: {case['photo']}")
+        else:
+            missing_files.append(f"❌ Keys {case['id']}: {case['photo']}")
+
+    response = "📁 Fayllar ro'yxati:\n\n"
+
+    if existing_files:
+        response += "✅ Mavjud fayllar:\n" + "\n".join(existing_files) + "\n\n"
+
+    if missing_files:
+        response += "❌ Mavjud bo'lmagan fayllar:\n" + "\n".join(missing_files) + "\n\n"
+        response += "🖼 Rasm qo'shish uchun Admin panelda '🖼 Rasm qo'shish' tugmasini bosing."
+    else:
+        response += "✅ Barcha fayllar mavjud!"
+
+    bot.send_message(m.chat.id, response)
+
+@bot.message_handler(func=lambda m: getattr(m, 'text', '').strip() == "💸 Tanga berish")
 def give_coins_start(m):
     if not is_admin(m.from_user.id):
         return
     admin_state[m.from_user.id] = {"step": "give_username"}
-    bot.send_message(m.chat.id, "✍️ Қабул қилувчининг @username ёки user_id сини юборинг")
+    bot.send_message(m.chat.id, "✍️ Qabul qiluvchining @username yoki user_id sini yuboring")
 
 @bot.message_handler(func=lambda m: m.from_user.id in admin_state and admin_state[m.from_user.id]["step"] == "give_username")
 def give_coins_username(m):
@@ -1154,11 +1235,11 @@ def give_coins_username(m):
             target = bot.get_chat(text)
             target_id = target.id
     except Exception:
-        bot.send_message(m.chat.id, "❌ Фойдаланувчи топилмади. Тўғри @username киритилганига ёки фойдаланувчи ботни ишга туширганига ишонч ҳосил қилинг.")
+        bot.send_message(m.chat.id, "❌ Foydalanuvchi topilmadi. To'g'ri @username kiritilganiga yoki foydalanuvchi botni ishga tushirganiga ishonch hosil qiling.")
         return
 
     admin_state[m.from_user.id] = {"step": "give_amount", "target": target_id}
-    bot.send_message(m.chat.id, "✍️ Неча танга берилсин? (сон)")
+    bot.send_message(m.chat.id, "✍️ Necha tanga berilsin? (son)")
 
 @bot.message_handler(func=lambda m: m.from_user.id in admin_state and admin_state[m.from_user.id]["step"] == "give_amount")
 def give_coins_amount(m):
@@ -1169,11 +1250,11 @@ def give_coins_amount(m):
     try:
         amount = int(m.text)
     except Exception:
-        bot.send_message(m.chat.id, "❌ Бутун сон киритинг")
+        bot.send_message(m.chat.id, "❌ Butun son kiriting")
         return
 
     if amount <= 0:
-        bot.send_message(m.chat.id, "❌ Сумма мусбат бўлиши керак")
+        bot.send_message(m.chat.id, "❌ Summa musbat bo'lishi kerak")
         return
 
     target = s["target"]
@@ -1183,67 +1264,43 @@ def give_coins_amount(m):
     else:
         db_query("UPDATE users SET coins = coins + ? WHERE user_id=?", (amount, target), commit=True)
 
-    bot.send_message(m.chat.id, f"✅ Фойдаланувчи {target} га {amount} танга берилди")
+    bot.send_message(m.chat.id, f"✅ Foydalanuvchi {target} ga {amount} tanga berildi")
     try:
-        bot.send_message(target, f"💸 Админ сизга {amount} танга берди")
+        bot.send_message(target, f"💸 Admin sizga {amount} tanga berdi")
     except Exception:
         pass
 
     del admin_state[m.from_user.id]
 
-@bot.message_handler(func=lambda m: getattr(m, 'text', '').strip() == "📊 Статистика")
+@bot.message_handler(func=lambda m: getattr(m, 'text', '').strip() == "📊 Statistika")
 def stats(m):
     users = db_query("SELECT COUNT(*) FROM users", fetchone=True)[0]
     promos = db_query("SELECT COUNT(*) FROM promocodes", fetchone=True)[0]
 
     bot.send_message(
         m.chat.id,
-        f"📊 Статистика:\n\n"
-        f"👤 Фойдаланувчилар: {users}\n"
-        f"🎫 Промокодлар: {promos}"
+        f"📊 Statistika:\n\n"
+        f"👤 Foydalanuvchilar: {users}\n"
+        f"🎫 Promokodlar: {promos}"
     )
 
 @bot.message_handler(commands=["promos"])
 def admin_promos(m):
     if not is_admin(m.from_user.id):
-        bot.send_message(m.chat.id, "❌ Рухсат йўқ")
+        bot.send_message(m.chat.id, "❌ Ruxsat yo'q")
         return
 
     rows = db_query("SELECT case_id, COUNT(*) FROM promocodes GROUP BY case_id", fetchall=True)
     if not rows:
-        bot.send_message(m.chat.id, "ℹ️ Ҳозирча промокодлар мавжуд эмас")
+        bot.send_message(m.chat.id, "ℹ️ Hozircha promokodlar mavjud emas")
         return
 
     text_lines = []
     for case_id, cnt in rows:
         sample = db_query("SELECT code FROM promocodes WHERE case_id=? LIMIT 5", (case_id,), fetchall=True)
         sample_codes = ", ".join([s[0] for s in sample]) if sample else "(none)"
-        text_lines.append(f"Кейс {case_id}: {cnt} та — намұна: {sample_codes}")
+        text_lines.append(f"Keys {case_id}: {cnt} ta — namuna: {sample_codes}")
 
-    bot.send_message(m.chat.id, "📦 Промокодлар:\n" + "\n".join(text_lines))
+    bot.send_message(m.chat.id, "📦 Promokodlar:\n" + "\n".join(text_lines))
 
-# Ботни каналга қўшиш учун буюруқ
-@bot.message_handler(commands=["addbot"])
-def cmd_addbot(m):
-    if not is_admin(m.from_user.id):
-        return
-    
-    bot_username = bot.get_me().username
-    bot_link = f"https://t.me/{bot_username}"
-    
-    message = (
-        f"🤖 Ботни каналга қўшиш бўйича кўрсатма:\n\n"
-        f"1. Канал созламаларига киринг\n"
-        f"2. 'Администраторлар' ни танланг\n"
-        f"3. 'Администратор қўшиш' ни босинг\n"
-        f"4. @{bot_username} ни киритинг ёки ҳаволага ўтинг: {bot_link}\n"
-        f"5. Ботга қуйидаги ҳуқуқларни беринг:\n"
-        f"   • ✅ Аъзоларни кўриш\n"
-        f"   • ❌ Қолган ҳуқуқларни ўчириб қўйинг\n"
-        f"6. 'Сақлаш' ни босинг\n\n"
-        f"⚠️ Муҳим: обуналарни текшириш учун бот администратор бўлиши керак!"
-    )
-    
-    bot.send_message(m.chat.id, message)
-
-bot.infinity_polling(threaded=False, skip_pending=True)
+bot.infinity_polling(skip_pending=True)

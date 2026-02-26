@@ -1,0 +1,149 @@
+<html lang="uz"> <head> <meta charset="UTF-8"> <title>Bulldrop - Sapyor mini-o'yin</title> <script src="https://cdn.tailwindcss.com"></script> <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"> <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"></link> <script> tailwind.config = { theme: { extend: { fontFamily: { inter: ['Inter', 'sans-serif'] }, colors: { bgMain: '#0E1117', bgHeader: '#141821', bgCard: '#171B23', bgInner: '#1D222C', bgSoft: '#2A2F3A', bgInput: '#232833', blueBtn: '#4F7DF3' } } } } </script> </head> <body class="bg-bgMain font-inter text-white min-h-screen"> <!-- HEADER --> <header class="w-full bg-bgHeader border-b border-[#1f2430]"> <div class="max-w-[1500px] mx-auto flex items-center justify-between px-8 py-4"> <div class="flex items-center space-x-12"> <div class="text-2xl font-extrabold text-red-500 tracking-wide">Bulldrop</div> <nav class="flex items-center space-x-10 text-[15px] text-gray-300"> <a class="hover:text-white">Keyslar</a> <a class="hover:text-white">O'yinlar</a> <a class="hover:text-white">Bullpass</a> <a class="hover:text-white">Bonuslar</a> <a class="hover:text-white">Shogun</a> </nav> </div> <div class="flex items-center space-x-4"> <div class="bg-[#1E2430] px-4 py-2 rounded-xl text-sm font-medium">3,08</div> <div class="w-9 h-9 rounded-full bg-yellow-500"></div> </div> </div> </header> <!-- MAIN --> <main class="max-w-[1500px] mx-auto px-8 py-10">
+<div class="bg-bgCard rounded-3xl p-10">
+
+  <!-- TOP SELECT -->
+  <div class="flex justify-between items-center mb-10">
+    <div class="bg-bgInner px-6 py-3 rounded-2xl flex items-center space-x-3 text-[15px]">
+      <i class="fas fa-bomb text-red-400"></i>
+      <span class="font-medium">Sapyor mini-o'yin</span>
+    </div>
+    <div class="bg-bgInner px-6 py-3 rounded-2xl text-[15px] flex items-center space-x-2">
+      <span>Qanday o'ynash kerak?</span>
+      <i class="fas fa-chevron-down text-gray-400 text-xs"></i>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-3 gap-10">
+
+    <!-- LEFT GAME AREA -->
+    <div class="col-span-2 bg-[#141923] rounded-3xl p-12 flex flex-col items-center">
+
+      <div class="flex items-center space-x-10">
+
+        <!-- LEFT COIN BOX -->
+        <div class="bg-bgInner rounded-2xl w-28 h-36 flex flex-col items-center justify-center space-y-3 border border-[#2a2f3a]">
+          <img src="https://placehold.co/70x70"
+               alt="Golden casino coin with embossed currency symbol shining metallic reflection detailed realistic style">
+          <span class="text-lg font-semibold">22</span>
+        </div>
+
+        <!-- GRID -->
+        <div class="bg-bgInner p-8 rounded-3xl border border-[#2a2f3a]">
+          <div class="grid grid-cols-5 gap-5">
+            <!-- 25 CELLS -->
+            <div class="w-20 h-20 bg-bgSoft rounded-2xl"></div>
+            <div class="w-20 h-20 bg-bgSoft rounded-2xl"></div>
+            <div class="w-20 h-20 bg-bgSoft rounded-2xl"></div>
+            <div class="w-20 h-20 bg-bgSoft rounded-2xl"></div>
+            <div class="w-20 h-20 bg-bgSoft rounded-2xl"></div>
+
+            <div class="w-20 h-20 bg-bgSoft rounded-2xl"></div>
+            <div class="w-20 h-20 bg-bgSoft rounded-2xl"></div>
+            <div class="w-20 h-20 bg-bgSoft rounded-2xl"></div>
+            <div class="w-20 h-20 bg-bgSoft rounded-2xl"></div>
+            <div class="w-20 h-20 bg-bgSoft rounded-2xl"></div>
+
+            <div class="w-20 h-20 bg-bgSoft rounded-2xl"></div>
+            <div class="w-20 h-20 bg-bgSoft rounded-2xl"></div>
+            <div class="w-20 h-20 bg-bgSoft rounded-2xl"></div>
+            <div class="w-20 h-20 bg-bgSoft rounded-2xl"></div>
+            <div class="w-20 h-20 bg-bgSoft rounded-2xl"></div>
+
+            <div class="w-20 h-20 bg-bgSoft rounded-2xl"></div>
+            <div class="w-20 h-20 bg-bgSoft rounded-2xl"></div>
+            <div class="w-20 h-20 bg-bgSoft rounded-2xl"></div>
+            <div class="w-20 h-20 bg-bgSoft rounded-2xl"></div>
+            <div class="w-20 h-20 bg-bgSoft rounded-2xl"></div>
+
+            <div class="w-20 h-20 bg-bgSoft rounded-2xl"></div>
+            <div class="w-20 h-20 bg-bgSoft rounded-2xl"></div>
+            <div class="w-20 h-20 bg-bgSoft rounded-2xl"></div>
+            <div class="w-20 h-20 bg-bgSoft rounded-2xl"></div>
+            <div class="w-20 h-20 bg-bgSoft rounded-2xl"></div>
+          </div>
+        </div>
+
+        <!-- RIGHT BOMB BOX -->
+        <div class="bg-bgInner rounded-2xl w-28 h-36 flex flex-col items-center justify-center space-y-3 border border-[#2a2f3a]">
+          <img src="https://placehold.co/70x70"
+               alt="Red cartoon style bomb with short fuse simple flat icon symbol">
+          <span class="text-lg font-semibold">3</span>
+        </div>
+
+      </div>
+
+      <!-- MULTIPLIERS -->
+      <div class="flex items-center space-x-6 mt-10 text-sm text-gray-300">
+        <button class="px-5 py-2 bg-bgInput rounded-xl">X1,07</button>
+        <button class="px-5 py-2 bg-bgInput rounded-xl">X1,22</button>
+        <button class="px-5 py-2 bg-bgInput rounded-xl">X1,4</button>
+        <button class="px-5 py-2 bg-bgInput rounded-xl">X1,62</button>
+        <button class="px-5 py-2 bg-bgInput rounded-xl">X1,89</button>
+      </div>
+
+    </div>
+
+    <!-- RIGHT SETTINGS PANEL -->
+    <div class="bg-[#141923] rounded-3xl p-10 flex flex-col">
+
+      <!-- BET -->
+      <div class="mb-8">
+        <div class="flex items-center space-x-2 text-sm mb-3">
+          <i class="fas fa-coins text-red-400"></i>
+          <span>Garov miqdori</span>
+        </div>
+        <div class="bg-bgInput h-14 rounded-2xl"></div>
+      </div>
+
+      <!-- BOMBS -->
+      <div class="mb-8">
+        <div class="flex items-center space-x-2 text-sm mb-4">
+          <i class="fas fa-bomb text-red-400"></i>
+          <span class="text-red-400 font-medium">bombalar soni</span>
+        </div>
+        <div class="flex space-x-3">
+          <button class="w-12 h-12 rounded-xl bg-white text-black font-semibold">3</button>
+          <button class="w-12 h-12 rounded-xl bg-bgInput">6</button>
+          <button class="w-12 h-12 rounded-xl bg-bgInput">9</button>
+          <button class="w-12 h-12 rounded-xl bg-bgInput">12</button>
+          <button class="w-12 h-12 rounded-xl bg-bgInput">15</button>
+          <button class="w-12 h-12 rounded-xl bg-bgInput">...</button>
+        </div>
+      </div>
+
+      <!-- MODE -->
+      <div class="flex space-x-4 mb-10">
+        <button class="flex-1 bg-bgInput py-4 rounded-2xl text-sm leading-tight">
+          Avtomatik<br>tanlash
+        </button>
+        <button class="flex-1 bg-bgInput py-4 rounded-2xl text-sm leading-tight">
+          yoki katakni o'zingiz<br>tanlang
+        </button>
+      </div>
+
+      <!-- START BUTTON -->
+      <button class="w-full bg-blueBtn hover:bg-blue-600 transition rounded-2xl py-5 text-lg font-semibold">
+        O'yinni boshlash
+      </button>
+
+    </div>
+
+  </div>
+
+</div>
+
+<!-- TABLE -->
+<div class="mt-10 bg-bgCard rounded-3xl p-8">
+  <div class="grid grid-cols-4 text-gray-400 text-sm mb-6">
+    <div>O'yinchi</div>
+    <div>Garov tikish</div>
+    <div>Bomb</div>
+    <div>Yutuq</div>
+  </div>
+  <div class="grid grid-cols-4 items-center bg-[#141923] p-5 rounded-2xl">
+    <div class="text-purple-400 font-medium">akrikunov430</div>
+    <div>-</div>
+    <div>-</div>
+    <div class="text-green-400 font-semibold">17,76</div>
+  </div>
+</div>
